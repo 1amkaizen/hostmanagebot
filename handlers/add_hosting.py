@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 (
     CHOOSING_USER, INPUT_PROVIDER, INPUT_DOMAIN,
     INPUT_SERVICE_TYPE, INPUT_EXPIRED, INPUT_BUY,
-    INPUT_SELL, INPUT_NOTES, CONFIRM_SAVE
-) = range(9)
+    INPUT_SELL
+) = range(7)
 
 temp_data = {}
 
@@ -152,18 +152,13 @@ async def input_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("⚠️ Masukkan angka (contoh: 200000)", reply_markup=back_button)
         return INPUT_SELL
-    await update.message.reply_text("Catatan opsional (atau ketik '-' untuk skip):", reply_markup=back_button)
-    return INPUT_NOTES
 
-async def input_notes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    logger.info(f"input_notes dipanggil oleh user_id={user_id} dengan input={update.message.text}")
-    temp_data[user_id]["notes"] = update.message.text if update.message.text != "-" else None
+    # Set notes None karena catatan dihapus
+    temp_data[user_id]["status"] = "active"
+
     await update.message.reply_text("✅ Data akan disimpan. Mohon tunggu...")
 
     data = temp_data.pop(user_id)
-    data["status"] = "active"
-
     supabase.table("HostingServices").insert(data).execute()
     logger.info(f"Hosting berhasil disimpan untuk user_id={user_id} dengan data: {data}")
 
@@ -219,10 +214,6 @@ def get_add_hosting_handler():
             ],
             INPUT_SELL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, input_sell),
-                CallbackQueryHandler(back_to_menu_handler, pattern="^back_to_menu$")
-            ],
-            INPUT_NOTES: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, input_notes),
                 CallbackQueryHandler(back_to_menu_handler, pattern="^back_to_menu$")
             ],
         },

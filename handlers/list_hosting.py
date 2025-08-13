@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 from database.supabase_client import supabase
 from config import ADMIN_IDS
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from collections import defaultdict
 from handlers.menus.admin_panel import show_admin_menu  # ✅ untuk tombol Back
 
@@ -43,10 +43,9 @@ async def listhosting(update: Update, context: ContextTypes.DEFAULT_TYPE):
             uid = u["user_id"]
             uname = u.get("username")
             if uname and uname.strip() and uname != "-":
-              usernames[uid] = f"@{uname}"
+                usernames[uid] = f"@{uname}"
             else:
-              usernames[uid] = u.get("full_name", "-")
-
+                usernames[uid] = u.get("full_name", "-")
 
     keyboard = []
     for m in months:
@@ -130,14 +129,31 @@ async def send_page(query, user_id):
                 user_info[uid] = u.get("full_name", "-")
 
     messages = []
+    today = date.today()
     for item in sliced:
         username = user_info.get(item["client_user_id"], "-")
+        
+        # Hitung sisa waktu expired
+        try:
+            expired_date = datetime.strptime(item["expired_date"], "%Y-%m-%d").date()
+            delta_days = (expired_date - today).days
+            if delta_days > 0:
+                sisa_waktu = f"⏳ {delta_days} hari lagi"
+            elif delta_days == 0:
+                sisa_waktu = "⚠️ Expired hari ini"
+            else:
+                sisa_waktu = f"❌ Expired {abs(delta_days)} hari lalu"
+        except Exception as e:
+            logger.error(f"❌ Gagal parsing expired_date={item['expired_date']} - {e}")
+            sisa_waktu = "-"
+
         messages.append(
             f"🌐 Domain: {item['domain']}\n"
             f"👤 user_id: {item['client_user_id']} ({username})\n"
             f"🏢 Provider: {item['provider']}\n"
             f"📦 Layanan: {item['service_type']}\n"
             f"📅 Expired: {item['expired_date']}\n"
+            f"{sisa_waktu}\n"
             f"💸 Harga Jual: {item['price_sell']}\n"
             f"📌 Status: {item['status']}"
         )
@@ -171,7 +187,7 @@ async def handle_pagination(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def get_list_hosting_handler():
     return [
-        CallbackQueryHandler(listhosting, pattern="^listhosting$"),  # 🔧 Ini perlu ditambahkan
+        CallbackQueryHandler(listhosting, pattern="^listhosting$"),
         CallbackQueryHandler(handle_filter, pattern="^filter_|^back_to_admin$"),
         CallbackQueryHandler(handle_pagination, pattern="^page_"),
     ]
