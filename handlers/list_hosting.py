@@ -74,17 +74,20 @@ async def listhosting(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def get_filtered_data(month=None):
     q = supabase.table("HostingServices").select(
         "tanggal_sewa,expired_date,client_user_id,payment_status,approved_date,domain,provider,service_type,price_sell,status"
-    ).order("tanggal_sewa")
+    ).order("expired_date")
 
     if month:
         start_date = datetime.strptime(month, "%Y-%m")
         end_date = (start_date.replace(day=28) + timedelta(days=4)).replace(day=1)
-        logger.info(f"🔍 Filter data antara {start_date.date()} s/d {end_date.date()}")
-        q = q.gte("tanggal_sewa", start_date.date().isoformat())
-        q = q.lt("tanggal_sewa", end_date.date().isoformat())
+        logger.info(f"🔍 Filter data antara {start_date.date()} s/d {end_date.date()} (berdasarkan expired_date)")
+
+        # filter utama pakai expired_date
+        q = q.gte("expired_date", start_date.date().isoformat())
+        q = q.lt("expired_date", end_date.date().isoformat())
 
     result = q.execute()
     return result.data
+
 
 async def handle_filter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -144,10 +147,8 @@ async def send_page(query, user_id):
             else:
                 expired_date_input = base_date  # fallback
 
-            if item.get("payment_status") == "approved":
-                display_expired = expired_date_input + relativedelta(months=1)
-            else:
-                display_expired = expired_date_input
+            display_expired = expired_date_input
+
 
             delta_days = (display_expired - today).days
             if delta_days < 0:
