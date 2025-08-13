@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 (
     CHOOSING_USER, INPUT_PROVIDER, INPUT_DOMAIN,
-    INPUT_SERVICE_TYPE, INPUT_EXPIRED, INPUT_BUY,
+    INPUT_SERVICE_TYPE, INPUT_TANGGAL_SEWA, INPUT_BUY,
     INPUT_SELL
 ) = range(7)
 
@@ -116,20 +116,20 @@ async def input_service_type(update: Update, context: ContextTypes.DEFAULT_TYPE)
     logger.info(f"input_service_type dipanggil oleh user_id={user_id} dengan input={query.data}")
     temp_data[user_id]["service_type"] = query.data
     await query.edit_message_text(
-        "Masukkan tanggal expired (format: YYYY-MM-DD):",
+        "Masukkan tanggal sewa (format: YYYY-MM-DD):",
         reply_markup=back_button
     )
-    return INPUT_EXPIRED
+    return INPUT_TANGGAL_SEWA
 
-async def input_expired(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def input_tanggal_sewa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    logger.info(f"input_expired dipanggil oleh user_id={user_id} dengan input={update.message.text}")
+    logger.info(f"input_tanggal_sewa dipanggil oleh user_id={user_id} dengan input={update.message.text}")
     try:
         datetime.strptime(update.message.text, "%Y-%m-%d")
     except ValueError:
         await update.message.reply_text("⚠️ Format tanggal salah. Contoh: 2025-12-01", reply_markup=back_button)
-        return INPUT_EXPIRED
-    temp_data[user_id]["expired_date"] = update.message.text
+        return INPUT_TANGGAL_SEWA
+    temp_data[user_id]["tanggal_sewa"] = update.message.text
     await update.message.reply_text("Masukkan harga beli:", reply_markup=back_button)
     return INPUT_BUY
 
@@ -153,8 +153,10 @@ async def input_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Masukkan angka (contoh: 200000)", reply_markup=back_button)
         return INPUT_SELL
 
-    # Set notes None karena catatan dihapus
     temp_data[user_id]["status"] = "active"
+
+    # Set expired_date sama dengan tanggal_sewa
+    temp_data[user_id]["expired_date"] = temp_data[user_id]["tanggal_sewa"]
 
     await update.message.reply_text("✅ Data akan disimpan. Mohon tunggu...")
 
@@ -204,8 +206,8 @@ def get_add_hosting_handler():
                 CallbackQueryHandler(input_service_type),
                 CallbackQueryHandler(back_to_menu_handler, pattern="^back_to_menu$")
             ],
-            INPUT_EXPIRED: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, input_expired),
+            INPUT_TANGGAL_SEWA: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, input_tanggal_sewa),
                 CallbackQueryHandler(back_to_menu_handler, pattern="^back_to_menu$")
             ],
             INPUT_BUY: [

@@ -36,19 +36,20 @@ async def back_to_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     await show_admin_menu(update, context)
     return ConversationHandler.END
 
-# Menu pilihan field untuk edit
+# Ubah di get_edit_menu
 def get_edit_menu(user_id):
     data = temp_data[user_id]
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(f"✏️ Provider ({data['provider']})", callback_data="edit_provider")],
         [InlineKeyboardButton(f"🌐 Domain ({data['domain']})", callback_data="edit_domain")],
         [InlineKeyboardButton(f"📦 Jenis Layanan ({data['service_type']})", callback_data="edit_service_type")],
-        [InlineKeyboardButton(f"📅 Expired ({data['expired_date']})", callback_data="edit_expired")],
+        [InlineKeyboardButton(f"📅 Tanggal Sewa ({data.get('tanggal_sewa', '-')})", callback_data="edit_tanggal_sewa")],
         [InlineKeyboardButton(f"💰 Harga Beli ({data['price_buy']})", callback_data="edit_buy")],
         [InlineKeyboardButton(f"💵 Harga Jual ({data['price_sell']})", callback_data="edit_sell")],
         [InlineKeyboardButton("✅ Selesai Edit", callback_data="done_edit")],
         [InlineKeyboardButton("⬅️ Kembali ke Menu", callback_data="back_to_menu")],
     ])
+
 
 async def edit_hosting_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -94,10 +95,11 @@ async def choose_hosting(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "provider": result.data.get("provider") or "",
         "domain": result.data.get("domain") or "",
         "service_type": result.data.get("service_type") or "",
-        "expired_date": result.data.get("expired_date") or "",
+        "tanggal_sewa": result.data.get("tanggal_sewa") or "",  # <-- ubah di sini
         "price_buy": result.data.get("price_buy") or 0,
         "price_sell": result.data.get("price_sell") or 0
     }
+
 
     await query.edit_message_text("Pilih bagian yang ingin diedit:", reply_markup=get_edit_menu(user_id))
     return MENU_EDIT
@@ -122,14 +124,16 @@ async def menu_edit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("✅ Edit selesai.", reply_markup=back_button)
         return ConversationHandler.END
 
+    # Ubah di menu_edit_handler
     field_map = {
         "edit_provider": (INPUT_PROVIDER, f"Masukkan provider baru (sekarang: {temp_data[user_id]['provider']}):"),
         "edit_domain": (INPUT_DOMAIN, f"Masukkan domain baru (sekarang: {temp_data[user_id]['domain']}):"),
         "edit_service_type": (INPUT_SERVICE_TYPE, "Pilih jenis layanan:"),
-        "edit_expired": (INPUT_EXPIRED, f"Masukkan tanggal expired YYYY-MM-DD (sekarang: {temp_data[user_id]['expired_date']}):"),
+        "edit_tanggal_sewa": (INPUT_EXPIRED, f"Masukkan tanggal sewa YYYY-MM-DD (sekarang: {temp_data[user_id].get('tanggal_sewa', '-')})"),
         "edit_buy": (INPUT_BUY, f"Masukkan harga beli baru (sekarang: {temp_data[user_id]['price_buy']}):"),
         "edit_sell": (INPUT_SELL, f"Masukkan harga jual baru (sekarang: {temp_data[user_id]['price_sell']}):"),
     }
+
 
     if action in field_map:
         state, text = field_map[action]
@@ -166,6 +170,7 @@ async def input_provider(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def input_domain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await input_text_field(update, context, "domain", INPUT_DOMAIN)
 
+# Ubah validator untuk tanggal sewa
 async def input_expired(update: Update, context: ContextTypes.DEFAULT_TYPE):
     def valid_date(val):
         try:
@@ -173,7 +178,7 @@ async def input_expired(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return True
         except ValueError:
             return False
-    return await input_text_field(update, context, "expired_date", INPUT_EXPIRED, validator=valid_date)
+    return await input_text_field(update, context, "tanggal_sewa", INPUT_EXPIRED, validator=valid_date)
 
 async def input_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     def valid_float(val):

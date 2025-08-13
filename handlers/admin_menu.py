@@ -6,7 +6,7 @@ from handlers.menus.admin_panel import show_admin_menu
 from handlers.add_hosting import add_hosting_start
 from handlers.list_hosting import listhosting
 from handlers.edit_hosting import edit_hosting_start  
-from handlers.delete_hosting import get_delete_hosting_handler, delete_hosting_start
+from handlers.delete_hosting import  delete_hosting_start
 
 
 logger = logging.getLogger(__name__)

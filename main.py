@@ -29,6 +29,7 @@ from handlers.info_hosting import get_pay_button_handler
 from handlers.payment_reminder import (
     send_payment_reminders,
     get_payment_proof_handler,
+    reset_monthly_status,
     get_admin_validation_handler
 )
 
@@ -43,11 +44,15 @@ scheduler = AsyncIOScheduler(timezone="Asia/Jakarta")
 
 # Fungsi async post-init scheduler
 async def on_startup(app):
-    # ✅ Reminder otomatis setiap hari jam 13:30
-    #scheduler.add_job(send_payment_reminders, "cron", hour=13, minute=30, args=[app.bot])
+    # ✅ Reminder otomatis setiap hari jam 08:00
+    #scheduler.add_job(send_payment_reminders, "cron", hour=8, minute=0, args=[app.bot])
     scheduler.add_job(send_payment_reminders, "interval", minutes=1, args=[app.bot])
+    # ✅ Reset otomatis tiap tanggal 1 jam 00:05
+    scheduler.add_job(reset_monthly_status, "cron", day=1, hour=0, minute=5)
+
     scheduler.start()
-    logging.info("Scheduler untuk payment reminder aktif.")
+    logging.info("Scheduler untuk payment reminder & reset bulanan aktif.")
+
 
 # Build aplikasi
 app = ApplicationBuilder().token(BOT_TOKEN).post_init(on_startup).build()
