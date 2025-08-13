@@ -144,6 +144,8 @@ async def input_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Masukkan harga jual:", reply_markup=back_button)
     return INPUT_SELL
 
+# 📍 File: handlers/add_hosting.py
+
 async def input_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     logger.info(f"input_sell dipanggil oleh user_id={user_id} dengan input={update.message.text}")
@@ -161,8 +163,31 @@ async def input_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Data akan disimpan. Mohon tunggu...")
 
     data = temp_data.pop(user_id)
+
+    # Simpan ke database
     supabase.table("HostingServices").insert(data).execute()
     logger.info(f"Hosting berhasil disimpan untuk user_id={user_id} dengan data: {data}")
+
+    # Kirim notifikasi ke client yang baru ditambahkan hosting
+    try:
+        client_id = data["client_user_id"]
+        notif_msg = (
+            f"📢 *Hosting Baru Ditambahkan*\n\n"
+            f"🌐 Domain: {data['domain']}\n"
+            f"🏢 Provider: {data['provider']}\n"
+            f"🛠 Layanan: {data['service_type']}\n"
+            f"📅 Tanggal Sewa: {data['tanggal_sewa']}\n"
+            f"💰 Harga: Rp {int(data['price_sell']):,}\n\n"
+            f"✅ Hosting Anda sudah aktif."
+        )
+        await context.bot.send_message(
+            chat_id=client_id,
+            text=notif_msg,
+            parse_mode="Markdown"
+        )
+        logger.info(f"Notifikasi berhasil dikirim ke client_user_id={client_id}")
+    except Exception as e:
+        logger.error(f"Gagal mengirim notifikasi ke client_user_id={data.get('client_user_id')}: {e}")
 
     await update.message.reply_text(
         "✅ Hosting berhasil disimpan.",
